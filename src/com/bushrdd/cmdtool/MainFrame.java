@@ -2,41 +2,44 @@ package com.bushrdd.cmdtool;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URL;
 
 public class MainFrame extends JFrame {
 
-    public static JTextArea mTextResult;
-    public static JTextField mTextIp;
-    public static JTextField mTextOrder;
+    public static MainFrame sMainFrame;
+
+    public static JTextArea sTextResult;
+    public static JTextField sTextIp;
+    public static JTextField sTextOrder;
+
+    public static SystemTray sTray = SystemTray.getSystemTray();
+
 
     public MainFrame() {
         setTitle("adb");
         setSize(500, 350);
         setResizable(false);
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        // setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         // setVisible(true);
     }
 
     public static void main(String[] args) {
-        MainFrame mainFrame = new MainFrame();
-
+        sMainFrame = new MainFrame();
         //ip连接
         JPanel connectView = new JPanel();
         connectView.setLayout(new FlowLayout(FlowLayout.LEFT));
-        mTextIp = new JTextField();
-        mTextIp.setPreferredSize(new Dimension(150, 25));
+        sTextIp = new JTextField();
+        sTextIp.setPreferredSize(new Dimension(150, 25));
         JButton btnConnect = new JButton("连接");
         BtnClickListener btnConnectListener = new BtnClickListener("connect");
         btnConnect.addActionListener(btnConnectListener);
         JButton btnScreen = new JButton("屏幕控制");
         BtnClickListener btnScreenListener = new BtnClickListener("screen");
         btnScreen.addActionListener(btnScreenListener);
-        connectView.add(mTextIp);
+        connectView.add(sTextIp);
         connectView.add(btnConnect);
         connectView.add(btnScreen);
         //快捷按钮
@@ -61,16 +64,16 @@ public class MainFrame extends JFrame {
         //自定义命令
         JPanel orderView = new JPanel();
         orderView.setLayout(new FlowLayout(FlowLayout.LEFT));
-        mTextOrder = new JTextField();
-        mTextOrder.setPreferredSize(new Dimension(400, 25));
+        sTextOrder = new JTextField();
+        sTextOrder.setPreferredSize(new Dimension(400, 25));
         JButton btnExecute = new JButton("执行");
         BtnClickListener btnExecuteListener = new BtnClickListener("execute");
         btnExecute.addActionListener(btnExecuteListener);
-        orderView.add(mTextOrder);
+        orderView.add(sTextOrder);
         orderView.add(btnExecute);
         //执行结果
-        mTextResult = new JTextArea();
-        JScrollPane jsp = new JScrollPane(mTextResult);    //将文本域放入滚动窗口
+        sTextResult = new JTextArea();
+        JScrollPane jsp = new JScrollPane(sTextResult);    //将文本域放入滚动窗口
         jsp.setPreferredSize(new Dimension(0, 200));
 
         Box mainBox = Box.createVerticalBox();
@@ -79,9 +82,16 @@ public class MainFrame extends JFrame {
         mainBox.add(ctrlView);
         mainBox.add(orderView);
         mainBox.add(jsp);
-        mainFrame.add(mainBox);
-        mainFrame.setLocationRelativeTo(null);
-        mainFrame.setVisible(true);
+        sMainFrame.add(mainBox);
+        sMainFrame.setLocationRelativeTo(null);
+        sMainFrame.setVisible(true);
+        sMainFrame.addWindowListener(new WindowAdapter() { // 窗口关闭事件
+            public void windowClosing(WindowEvent e) {
+                sMainFrame.setVisible(false);
+                // miniTray();
+            }
+        });
+        miniTray();
     }
 
     static class BtnClickListener implements ActionListener {
@@ -96,7 +106,7 @@ public class MainFrame extends JFrame {
             switch (id) {
                 case "connect":
                     executeOrder("adb disconnect", false);
-                    String ip = mTextIp.getText();
+                    String ip = sTextIp.getText();
                     if (ip.contains("192.168.")) {
                         executeOrder("adb connect " + ip, false);
                     } else {
@@ -119,7 +129,7 @@ public class MainFrame extends JFrame {
                     executeOrder("cmd.exe /k start H:/Codes/bats/打开固件后台.bat", true);
                     break;
                 case "execute":
-                    executeOrder(mTextOrder.getText(), false);
+                    executeOrder(sTextOrder.getText(), false);
                     break;
             }
         }
@@ -140,11 +150,45 @@ public class MainFrame extends JFrame {
                     while ((line = errReader.readLine()) != null) {
                         stringBuilder.append(line);
                     }
-                    mTextResult.append(stringBuilder.toString() + '\n');
+                    sTextResult.append(stringBuilder.toString() + '\n');
                 }
             } catch (Exception exception) {
                 exception.printStackTrace();
             }
+        }
+    }
+
+    // 窗口最小化到任务栏托盘
+    private static void miniTray() {
+        try {
+            // 托盘图标
+            URL url = MainFrame.class.getResource("cat.png");
+            ImageIcon trayImg = new ImageIcon(url);
+            // 创建弹出菜单
+            PopupMenu popupMenu = new PopupMenu();
+            MenuItem exitItem = new MenuItem("退出");
+            exitItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    System.exit(0);
+                }
+            });
+            popupMenu.add(exitItem);
+            TrayIcon trayIcon = new TrayIcon(trayImg.getImage(), "cmdTool", popupMenu);
+            trayIcon.setImageAutoSize(true);
+            trayIcon.addMouseListener(new MouseAdapter() {
+                public void mouseClicked(MouseEvent e) {
+                    // 单击 1 双击 2
+                    if (e.getButton() == 1 && e.getClickCount() == 1) {
+                        sMainFrame.setVisible(true);
+                        sMainFrame.setExtendedState(JFrame.NORMAL);
+                        sMainFrame.toFront();
+                    }
+                }
+            });
+            sTray.add(trayIcon);
+        } catch (AWTException e1) {
+            e1.printStackTrace();
         }
     }
 }
