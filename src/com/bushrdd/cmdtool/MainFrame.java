@@ -166,7 +166,7 @@ public class MainFrame extends JFrame {
             ImageIcon trayImg = new ImageIcon(url);
             // 创建弹出菜单
             PopupMenu popupMenu = new PopupMenu();
-            MenuItem exitItem = new MenuItem("退出");
+            MenuItem exitItem = new MenuItem("Exit");
             exitItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
